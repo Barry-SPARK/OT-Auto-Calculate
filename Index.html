@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ms">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator OT Pintar Perkhidmatan Awam</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+      body { background-color: #f4f6f9; padding: 15px 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+      .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 18px; }
+      .card-header { font-weight: 600; border-top-left-radius: 12px !important; border-top-right-radius: 12px !important; }
+      .bg-ot { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; }
+      .badge-rate { font-size: 0.8rem; padding: 4px 8px; border-radius: 6px; }
+      .table-responsive { font-size: 0.9rem; }
+      @media print {
+        .no-print { display: none !important; }
+        .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container" style="max-width: 900px;">
+      
+      <!-- Tajuk App -->
+      <div class="text-center mb-4">
+        <h3 class="fw-bold text-primary mb-1"><i class="bi bi-clock-history"></i> Kalkulator OT Pintar</h3>
+        <p class="text-muted small">Pengiraan Automatik Jam Siang/Malam & Kadar OT Perkhidmatan Awam</p>
+      </div>
+
+      <!-- 1. Gaji Asas -->
+      <div class="card p-3">
+        <div class="row align-items-center">
+          <div class="col-md-7">
+            <label class="form-label fw-bold mb-1">Gaji Asas Bulanan (RM):</label>
+            <input type="number" id="gajiAsas" class="form-control form-control-lg" placeholder="Contoh: 2500.00" oninput="simpanGajiDanKiraAll()">
+          </div>
+          <div class="col-md-5 mt-2 mt-md-0 text-md-end text-muted small">
+            <div>Formula: <code>(Gaji × 12 × Kadar × Jam) ÷ (313 × 8)</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Borang Tambah Rekod OT -->
+      <div class="card no-print">
+        <div class="card-header bg-primary text-white"><i class="bi bi-plus-circle me-1"></i> Tambah Rekod Tugasan OT</div>
+        <div class="card-body">
+          <form id="otForm" onsubmit="tambahRekod(event)">
+            <div class="row g-3">
+              
+              <!-- Tarikh -->
+              <div class="col-md-4 col-12">
+                <label class="form-label small fw-bold">Tarikh Tugasan</label>
+                <input type="date" id="inputTarikh" class="form-control" required onchange="autodesiJenisHari()">
+              </div>
+
+              <!-- Jenis Hari (Automatik / Manual Override) -->
+              <div class="col-md-4 col-6">
+                <label class="form-label small fw-bold">Jenis Hari</label>
+                <select id="inputJenisHari" class="form-select">
+                  <option value="biasa">Hari Biasa (Isnin - Jumaat)</option>
+                  <option value="minggu">Hujung Minggu (Sabtu / Ahad)</option>
+                </select>
+              </div>
+
+              <!-- Checkbox Cuti Umum (PH) -->
+              <div class="col-md-4 col-6 d-flex align-items-end mb-2">
+                <div class="form-check form-switch pt-2">
+                  <input class="form-check-input" type="checkbox" id="checkPH" onchange="kemaskiniLabelPH()">
+                  <label class="form-check-input-label fw-bold text-danger ms-1" for="checkPH" id="labelPH">Cuti Umum (PH)</label>
+                </div>
+              </div>
+
+              <!-- Jam Mula -->
+              <div class="col-md-4 col-6">
+                <label class="form-label small fw-bold">Masa Mula (In)</label>
+                <input type="time" id="inputMasaMula" class="form-control" required>
+              </div>
+
+              <!-- Jam Tamat -->
+              <div class="col-md-4 col-6">
+                <label class="form-label small fw-bold">Masa Tamat (Out)</label>
+                <input type="time" id="inputMasaTamat" class="form-control" required>
+              </div>
+
+              <!-- Butang Submit -->
+              <div class="col-md-4 col-12 d-flex align-items-end">
+                <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-plus-lg"></i> Tambah Rekod</button>
+              </div>
+
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 3. Senarai Rekod OT -->
+      <div class="card">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-list-check me-1"></i> Senarai Tugasan OT Dituntut</span>
+          <button class="btn btn-sm btn-outline-light no-print" onclick="padamSemua()"><i class="bi bi-trash"></i> Bersihkan Semua</button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>Tarikh</th>
+                  <th>Jenis Hari</th>
+                  <th>Waktu Kerja</th>
+                  <th class="text-center">Jam Siang<br><small class="text-muted">(06:00-22:00)</small></th>
+                  <th class="text-center">Jam Malam<br><small class="text-muted">(22:00-06:00)</small></th>
+                  <th class="text-end">Jumlah (RM)</th>
+                  <th class="text-center no-print">Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="senaraiTuntutan">
+                <!-- Dijana melalui JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Rumusan Mengikut Kadar (Rate Breakdown) -->
+      <div class="card">
+        <div class="card-header bg-secondary text-white"><i class="bi bi-pie-chart me-1"></i> Ringkasan Kadar & Jam Claimed</div>
+        <div class="card-body">
+          <div class="row text-center g-2">
+            <div class="col-md-2 col-4 border-end">
+              <span class="badge bg-primary badge-rate">1 1/8 (1.125)</span>
+              <div class="fw-bold mt-1" id="sumJam1125">0.0 jam</div>
+              <small class="text-muted">RM <span id="sumRM1125">0.00</span></small>
+            </div>
+            <div class="col-md-2 col-4 border-end">
+              <span class="badge bg-info text-dark badge-rate">1 1/4 (1.25)</span>
+              <div class="fw-bold mt-1" id="sumJam125">0.0 jam</div>
+              <small class="text-muted">RM <span id="sumRM125">0.00</span></small>
+            </div>
+            <div class="col-md-2 col-4 border-end">
+              <span class="badge bg-warning text-dark badge-rate">1 1/3 (1.333)</span>
+              <div class="fw-bold mt-1" id="sumJam1333">0.0 jam</div>
+              <small class="text-muted">RM <span id="sumRM1333">0.00</span></small>
+            </div>
+            <div class="col-md-3 col-6 border-end">
+              <span class="badge bg-danger badge-rate">1 3/4 (1.75)</span>
+              <div class="fw-bold mt-1" id="sumJam175">0.0 jam</div>
+              <small class="text-muted">RM <span id="sumRM175">0.00</span></small>
+            </div>
+            <div class="col-md-3 col-6">
+              <span class="badge bg-dark badge-rate">2.0</span>
+              <div class="fw-bold mt-1" id="sumJam20">0.0 jam</div>
+              <small class="text-muted">RM <span id="sumRM20">0.00</span></small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Total Keseluruhan -->
+      <div class="card bg-ot">
+        <div class="card-body text-center p-4">
+          <h5 class="text-white-50 text-uppercase mb-1">JUMLAH KESELURUHAN TUNTUTAN OT</h5>
+          <h1 class="display-4 fw-bold my-1" id="grandTotalOT">RM 0.00</h1>
+          <div class="mt-3 no-print">
+            <button class="btn btn-light fw-bold me-2" onclick="window.print()"><i class="bi bi-printer"></i> Cetak / Simpan PDF</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      var rekodOTList = [];
+
+      // Load Simpanan LocalStorage apabila aplikasi dibuka
+      window.onload = function() {
+        var savedGaji = localStorage.getItem('ot_gaji_asas');
+        if (savedGaji) {
+          document.getElementById('gajiAsas').value = savedGaji;
+        }
+
+        var savedList = localStorage.getItem('ot_rekod_list');
+        if (savedList) {
+          rekodOTList = JSON.parse(savedList);
+        }
+
+        // Set tarikh hari ini sebagai default
+        document.getElementById('inputTarikh').valueAsDate = new Date();
+        autodesiJenisHari();
+
+        paparRekod();
+      };
+
+      // Auto kesan Sabtu/Ahad vs Isnin-Jumaat
+      function autodesiJenisHari() {
+        var tarikhVal = document.getElementById('inputTarikh').value;
+        if (!tarikhVal) return;
+
+        var dateObj = new Date(tarikhVal);
+        var dayIndex = dateObj.getDay(); // 0 = Ahad, 6 = Sabtu
+
+        var selectElement = document.getElementById('inputJenisHari');
+        if (dayIndex === 0 || dayIndex === 6) {
+          selectElement.value = 'minggu';
+        } else {
+          selectElement.value = 'biasa';
+        }
+      }
+
+      function kemaskiniLabelPH() {
+        var isPH = document.getElementById('checkPH').checked;
+        var label = document.getElementById('labelPH');
+        if (isPH) {
+          label.classList.add('fw-bolder', 'text-decoration-underline');
+        } else {
+          label.classList.remove('fw-bolder', 'text-decoration-underline');
+        }
+      }
+
+      // Fungsi kiraan pembahagian jam Siang (06:00 - 22:00) vs Malam (22:00 - 06:00)
+      function kiraPecahanJam(mulaStr, tamatStr) {
+        var parts1 = mulaStr.split(':');
+        var parts2 = tamatStr.split(':');
+
+        var m1 = parseInt(parts1[0]) * 60 + parseInt(parts1[1]);
+        var m2 = parseInt(parts2[0]) * 60 + parseInt(parts2[1]);
+
+        if (m2 <= m1) {
+          m2 += 1440; // Rentas tengah malam
+        }
+
+        var minSiang = 0;
+        var minMalam = 0;
+
+        for (var m = m1; m < m2; m++) {
+          var modM = m % 1440;
+          if (modM >= 360 && modM < 1320) { // 06:00 AM (360) hingga 10:00 PM (1320)
+            minSiang++;
+          } else {
+            minMalam++;
+          }
+        }
+
+        return {
+          jamSiang: minSiang / 60,
+          jamMalam: minMalam / 60,
+          totalJam: (m2 - m1) / 60
+        };
+      }
+
+      function tambahRekod(e) {
+        e.preventDefault();
+
+        var tarikh = document.getElementById('inputTarikh').value;
+        var jenisHari = document.getElementById('inputJenisHari').value;
+        var isPH = document.getElementById('checkPH').checked;
+        var masaMula = document.getElementById('inputMasaMula').value;
+        var masaTamat = document.getElementById('inputMasaTamat').value;
+
+        if (!tarikh || !masaMula || !masaTamat) {
+          alert('Sila lengkapkan maklumat tarikh dan masa kerja.');
+          return;
+        }
+
+        var pecahan = kiraPecahanJam(masaMula, masaTamat);
+
+        var item = {
+          id: Date.now(),
+          tarikh: tarikh,
+          jenisHari: jenisHari,
+          isPH: isPH,
+          masaMula: masaMula,
+          masaTamat: masaTamat,
+          jamSiang: pecahan.jamSiang,
+          jamMalam: pecahan.jamMalam
+        };
+
+        rekodOTList.push(item);
+        simpanLocalStorage();
+        paparRekod();
+
+        // Reset borang masa
+        document.getElementById('inputMasaMula').value = '';
+        document.getElementById('inputMasaTamat').value = '';
+      }
+
+      function padamRekod(id) {
+        rekodOTList = rekodOTList.filter(item => item.id !== id);
+        simpanLocalStorage();
+        paparRekod();
+      }
+
+      function padamSemua() {
+        if (confirm('Adakah anda pasti mahu memadam semua rekod tuntutan?')) {
+          rekodOTList = [];
+          simpanLocalStorage();
+          paparRekod();
+        }
+      }
+
+      function simpanGajiDanKiraAll() {
+        var gaji = document.getElementById('gajiAsas').value;
+        localStorage.setItem('ot_gaji_asas', gaji);
+        paparRekod();
+      }
+
+      function simpanLocalStorage() {
+        localStorage.setItem('ot_rekod_list', JSON.stringify(rekodOTList));
+      }
+
+      function kiraFormulaRM(gaji, kadar, jam) {
+        if (!gaji || gaji <= 0) return 0;
+        return (gaji * 12 * kadar * jam) / (313 * 8);
+      }
+
+      function formatTarikh(str) {
+        var d = new Date(str);
+        var options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+        return d.toLocaleDateString('ms-MY', options);
+      }
+
+      function paparRekod() {
+        var gaji = parseFloat(document.getElementById('gajiAsas').value) || 0;
+        var tbody = document.getElementById('senaraiTuntutan');
+        tbody.innerHTML = '';
+
+        var totalJam1125 = 0, totalJam125 = 0, totalJam1333 = 0, totalJam175 = 0, totalJam20 = 0;
+        var grandTotalRM = 0;
+
+        if (rekodOTList.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-3">Tiada rekod tuntutan OT dimasukkan lagi.</td></tr>`;
+        }
+
+        rekodOTList.forEach((item, index) => {
+          // Tentukan kadar mengikut jenis hari
+          var kadarSiang = 1.125;
+          var kadarMalam = 1.25;
+          var labelHari = 'Hari Biasa';
+
+          if (item.isPH) {
+            kadarSiang = 1.75;
+            kadarMalam = 2.0;
+            labelHari = '<span class="badge bg-danger">Cuti Umum (PH)</span>';
+          } else if (item.jenisHari === 'minggu') {
+            kadarSiang = 1.25;
+            kadarMalam = 1.33333333;
+            labelHari = '<span class="badge bg-warning text-dark">Hujung Minggu</span>';
+          } else {
+            labelHari = '<span class="badge bg-secondary">Hari Biasa</span>';
+          }
+
+          // Akumulasi jam mengikut kadar
+          if (kadarSiang === 1.125) totalJam1125 += item.jamSiang;
+          if (kadarSiang === 1.25) totalJam125 += item.jamSiang;
+          if (kadarSiang === 1.75) totalJam175 += item.jamSiang;
+
+          if (kadarMalam === 1.25) totalJam125 += item.jamMalam;
+          if (kadarMalam === 1.33333333) totalJam1333 += item.jamMalam;
+          if (kadarMalam === 2.0) totalJam20 += item.jamMalam;
+
+          // Kira RM entri ini
+          var rmSiang = kiraFormulaRM(gaji, kadarSiang, item.jamSiang);
+          var rmMalam = kiraFormulaRM(gaji, kadarMalam, item.jamMalam);
+          var totalRMItem = rmSiang + rmMalam;
+          grandTotalRM += totalRMItem;
+
+          var tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td class="fw-bold">${formatTarikh(item.tarikh)}</td>
+            <td>${labelHari}</td>
+            <td><code>${item.masaMula} - ${item.masaTamat}</code></td>
+            <td class="text-center">${item.jamSiang > 0 ? item.jamSiang.toFixed(1) + ' j' : '-'}</td>
+            <td class="text-center">${item.jamMalam > 0 ? item.jamMalam.toFixed(1) + ' j' : '-'}</td>
+            <td class="text-end fw-bold text-primary">RM ${totalRMItem.toFixed(2)}</td>
+            <td class="text-center no-print">
+              <button class="btn btn-sm btn-outline-danger" onclick="padamRekod(${item.id})"><i class="bi bi-x-lg"></i></button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Kira RM ringkasan
+        var rm1125 = kiraFormulaRM(gaji, 1.125, totalJam1125);
+        var rm125 = kiraFormulaRM(gaji, 1.25, totalJam125);
+        var rm1333 = kiraFormulaRM(gaji, 1.33333333, totalJam1333);
+        var rm175 = kiraFormulaRM(gaji, 1.75, totalJam175);
+        var rm20 = kiraFormulaRM(gaji, 2.0, totalJam20);
+
+        document.getElementById('sumJam1125').innerText = totalJam1125.toFixed(1) + ' jam';
+        document.getElementById('sumRM1125').innerText = rm1125.toFixed(2);
+
+        document.getElementById('sumJam125').innerText = totalJam125.toFixed(1) + ' jam';
+        document.getElementById('sumRM125').innerText = rm125.toFixed(2);
+
+        document.getElementById('sumJam1333').innerText = totalJam1333.toFixed(1) + ' jam';
+        document.getElementById('sumRM1333').innerText = rm1333.toFixed(2);
+
+        document.getElementById('sumJam175').innerText = totalJam175.toFixed(1) + ' jam';
+        document.getElementById('sumRM175').innerText = rm175.toFixed(2);
+
+        document.getElementById('sumJam20').innerText = totalJam20.toFixed(1) + ' jam';
+        document.getElementById('sumRM20').innerText = rm20.toFixed(2);
+
+        document.getElementById('grandTotalOT').innerText = 'RM ' + grandTotalRM.toFixed(2);
+      }
+    </script>
+  </body>
+</html>
