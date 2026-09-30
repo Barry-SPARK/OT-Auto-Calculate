@@ -25,7 +25,7 @@
       <!-- Tajuk App -->
       <div class="text-center mb-3">
         <h4 class="fw-bold text-dark mb-1">Kalkulator Borang Tuntutan Elaun Lebih Masa</h4>
-        <p class="text-muted small mb-0">Pengiraan Automatik Masa Kerja Biasa, Masa Rehat & Rate OT (TS.KEW:13/Pin.1 2024)</p>
+        <p class="text-muted small mb-0">Format Lajur Mengikut Borang TS.KEW:13/Pin.1 2024</p>
       </div>
 
       <!-- 1. Gaji Pokok -->
@@ -107,7 +107,7 @@
                   <th rowspan="2" style="width: 90px;">Tarikh</th>
                   <th colspan="2">Masa</th>
                   <th rowspan="2" style="width: 95px;">Jumlah Jam Bertugas</th>
-                  <th rowspan="2" style="width: 90px;">Tolakan / Biasa</th>
+                  <th rowspan="2" style="width: 90px;">Tolakan Masa</th>
                   <th rowspan="2" style="width: 85px;">Jumlah Lebih Masa</th>
                   <th colspan="5">Kadar Gandaan Bayaran Lebih Masa (Jam)</th>
                   <th rowspan="2" style="width: 100px;">Jumlah (RM)</th>
@@ -187,7 +187,7 @@
         paparJadual();
       }
 
-      // Pengiraan Logic Tolakan Masa & Siang/Malam
+      // Logic Pengiraan Masa Bertugas, Tolakan & Kadar OT
       function kiraLogikMasa(dari, ke, jenisHari, isPH) {
         var p1 = dari.split(':'), p2 = ke.split(':');
         var m1 = parseInt(p1[0]) * 60 + parseInt(p1[1]);
@@ -204,23 +204,26 @@
         var tolakanStr = '';
 
         if (jenisHari === 'biasa' && !isPH) {
-          // Hari Kerja Biasa (Bukan PH): Tolak 9 Jam (540 minit)
-          tolakanStr = '9j (Biasa)';
-          var minitBiasaDitolak = 0;
+          // SYARAT BAHARU HARI BIASA:
+          // Jam 21:00 = 21 * 60 = 1260 minit.
+          // Jika kerja tamat >= 21:00 (1260 minit), tolak 10 jam (600 minit).
+          // Jika kerja tamat <= 20:59, tolak 9 jam (540 minit).
+          var minitTolakan = (m2 >= 1260) ? 600 : 540;
+          tolakanStr = (minitTolakan / 60) + 'j (Biasa)';
 
+          var minitBiasaDitolak = 0;
           for (var m = m1; m < m2; m++) {
-            if (minitBiasaDitolak < 540) {
+            if (minitBiasaDitolak < minitTolakan) {
               minitBiasaDitolak++;
             } else {
               var mod = m % 1440;
-              if (mod >= 360 && mod < 1320) minitSiangOT++; // Siang 06:00 - 22:00
-              else minitMalamOT++; // Malam 22:00 - 06:00
+              if (mod >= 360 && mod < 1320) minitSiangOT++; // Siang (06:00 - 22:00)
+              else minitMalamOT++; // Malam (22:00 - 06:00)
             }
           }
         } else {
-          // Hujung Minggu ATAU Cuti Umum: Tolak masa rehat 13:00-14:00 & 19:00-20:00
+          // HUJUNG MINGGU / CUTI UMUM (PH): Tolak Masa Rehat (13:00-14:00 & 19:00-20:00)
           var minitRehat = 0;
-
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
             var isRehat = (mod >= 780 && mod < 840) || (mod >= 1140 && mod < 1200);
@@ -272,7 +275,7 @@
           j1125: 0, j125: 0, j150: 0, j175: 0, j200: 0
         };
 
-        // Agihan kadar rate mengikut perpuluhan jam
+        // Agihan Kadar OT
         if (isPH) {
           item.j175 = logik.jamSiangOT;
           item.j200 = logik.jamMalamOT;
