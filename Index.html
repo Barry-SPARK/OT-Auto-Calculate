@@ -20,12 +20,12 @@
     </style>
   </head>
   <body>
-    <div class="container-fluid" style="max-width: 1000px;">
+    <div class="container-fluid" style="max-width: 1050px;">
       
       <!-- Tajuk App -->
       <div class="text-center mb-3">
         <h4 class="fw-bold text-dark mb-1">Kalkulator Borang Tuntutan Elaun Lebih Masa</h4>
-        <p class="text-muted small mb-0">Format Lajur Mengikut Borang TS.KEW:13/Pin.1 2024</p>
+        <p class="text-muted small mb-0">Pengiraan Automatik Masa Kerja Biasa, Masa Rehat & Rate OT (TS.KEW:13/Pin.1 2024)</p>
       </div>
 
       <!-- 1. Gaji Pokok -->
@@ -36,7 +36,7 @@
             <input type="number" id="gajiPokok" class="form-control form-control-lg fw-bold text-primary" placeholder="Masukkan Gaji Pokok" oninput="kemaskiniGaji()">
           </div>
           <div class="col-md-6 text-md-end text-muted small mt-2 mt-md-0">
-            <div>Formula Kadar: <code>(Gaji Pokok × 12 × Kadar × Jam) ÷ (313 × 8)</code></div>
+            <div>Formula OT: <code>(Gaji Pokok × 12 × Kadar × Jam Perpuluhan) ÷ (313 × 8)</code></div>
           </div>
         </div>
       </div>
@@ -60,31 +60,32 @@
                 <select id="inputJenisHari" class="form-select form-select-sm">
                   <option value="biasa">Hari Kerja Biasa</option>
                   <option value="minggu">Hujung Minggu / Rehat</option>
-                  <option value="ph">Cuti Umum (PH)</option>
                 </select>
               </div>
 
+              <!-- Checkbox Cuti Umum (PH) -->
+              <div class="col-md-2 col-12 d-flex align-items-end mb-1">
+                <div class="form-check form-switch pt-2">
+                  <input class="form-check-input" type="checkbox" id="checkPH">
+                  <label class="form-check-label fw-bold text-danger small" for="checkPH">Cuti Umum (PH)</label>
+                </div>
+              </div>
+
               <!-- Masa Dari -->
-              <div class="col-md-3 col-6">
+              <div class="col-md-2 col-6">
                 <label class="form-label small fw-bold">Masa Dari</label>
                 <input type="time" id="inputMasaDari" class="form-control form-control-sm" required>
               </div>
 
               <!-- Masa Ke -->
-              <div class="col-md-3 col-6">
+              <div class="col-md-2 col-6">
                 <label class="form-label small fw-bold">Masa Ke</label>
                 <input type="time" id="inputMasaKe" class="form-control form-control-sm" required>
               </div>
 
-              <!-- Perihal Tugas -->
-              <div class="col-md-9 col-12">
-                <label class="form-label small fw-bold">Perihal Tugas - Tugas</label>
-                <input type="text" id="inputTugas" class="form-control form-control-sm" placeholder="Contoh: Kawalan keselamatan / Tugas khas di stesen" required>
-              </div>
-
               <!-- Butang Tambah -->
-              <div class="col-md-3 col-12 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold"><i class="bi bi-plus-lg"></i> Tambah Ke Senarai</button>
+              <div class="col-12 mt-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold"><i class="bi bi-plus-lg"></i> Tambah Rekod Ke Senarai</button>
               </div>
 
             </div>
@@ -92,28 +93,29 @@
         </div>
       </div>
 
-      <!-- 3. Jadual Mengikut Format Borang TS.KEW:13 -->
+      <!-- 3. Jadual Tuntutan -->
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-table me-1"></i> Ringkasan Tuntutan (Salin terus ke Borang)</span>
-          <button class="btn btn-sm btn-outline-light no-print" onclick="padamSemua()"><i class="bi bi-trash"></i> Reset All</button>
+          <span><i class="bi bi-table me-1"></i> Ringkasan Tuntutan (Salin terus ke Borang Fizikal)</span>
+          <button class="btn btn-sm btn-outline-light no-print" onclick="padamSemua()"><i class="bi bi-trash"></i> Reset Semua</button>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle table-borang mb-0">
               <thead>
                 <tr>
-                  <th rowspan="2" style="width: 100px;">Tarikh</th>
+                  <th rowspan="2" style="width: 90px;">Tarikh</th>
                   <th colspan="2">Masa</th>
-                  <th rowspan="2" style="width: 70px;">Jumlah Jam</th>
+                  <th rowspan="2" style="width: 95px;">Jumlah Jam Bertugas</th>
+                  <th rowspan="2" style="width: 90px;">Tolakan / Biasa</th>
+                  <th rowspan="2" style="width: 85px;">Jumlah Lebih Masa</th>
                   <th colspan="5">Kadar Gandaan Bayaran Lebih Masa (Jam)</th>
-                  <th rowspan="2">Perihal Tugas - Tugas</th>
-                  <th rowspan="2" style="width: 90px;">Jumlah (RM)</th>
+                  <th rowspan="2" style="width: 100px;">Jumlah (RM)</th>
                   <th rowspan="2" class="no-print" style="width: 40px;"></th>
                 </tr>
                 <tr>
-                  <th style="width: 65px;">Dari</th>
-                  <th style="width: 65px;">Ke</th>
+                  <th style="width: 60px;">Dari</th>
+                  <th style="width: 60px;">Ke</th>
                   <th style="width: 55px;">1 1/8</th>
                   <th style="width: 55px;">1 1/4</th>
                   <th style="width: 55px;">1 1/2</th>
@@ -126,14 +128,15 @@
               </tbody>
               <tfoot class="table-light fw-bold">
                 <tr>
-                  <td colspan="3" class="text-end">JUMLAH JAM / RM:</td>
-                  <td class="text-center" id="footTotalJam">0.0</td>
-                  <td class="rate-col" id="footR1125">0.0</td>
-                  <td class="rate-col" id="footR125">0.0</td>
-                  <td class="rate-col" id="footR150">0.0</td>
-                  <td class="rate-col" id="footR175">0.0</td>
-                  <td class="rate-col" id="footR200">0.0</td>
-                  <td class="text-end">JUMLAH TUNTUTAN:</td>
+                  <td colspan="3" class="text-end">JUMLAH KESELURUHAN:</td>
+                  <td class="text-center" id="footTotalJamBertugas">-</td>
+                  <td class="text-center">-</td>
+                  <td class="text-center text-primary" id="footTotalOTPerpuluhan">0.00 j</td>
+                  <td class="rate-col" id="footR1125">0.00</td>
+                  <td class="rate-col" id="footR125">0.00</td>
+                  <td class="rate-col" id="footR150">0.00</td>
+                  <td class="rate-col" id="footR175">0.00</td>
+                  <td class="rate-col" id="footR200">0.00</td>
                   <td class="text-end text-primary" id="footGrandTotal">RM 0.00</td>
                   <td class="no-print"></td>
                 </tr>
@@ -143,7 +146,7 @@
         </div>
       </div>
 
-      <!-- Butang Cetak / Simpan -->
+      <!-- Cetak / Simpan -->
       <div class="text-center mt-3 no-print">
         <button class="btn btn-secondary fw-bold" onclick="window.print()"><i class="bi bi-printer"></i> Cetak / Simpan PDF</button>
       </div>
@@ -184,23 +187,65 @@
         paparJadual();
       }
 
-      function kiraPecahan(dari, ke) {
+      // Pengiraan Logic Tolakan Masa & Siang/Malam
+      function kiraLogikMasa(dari, ke, jenisHari, isPH) {
         var p1 = dari.split(':'), p2 = ke.split(':');
-        var m1 = parseInt(p1[0])*60 + parseInt(p1[1]);
-        var m2 = parseInt(p2[0])*60 + parseInt(p2[1]);
+        var m1 = parseInt(p1[0]) * 60 + parseInt(p1[1]);
+        var m2 = parseInt(p2[0]) * 60 + parseInt(p2[1]);
         if (m2 <= m1) m2 += 1440; // Rentas tengah malam
 
-        var minSiang = 0, minMalam = 0;
-        for (var m = m1; m < m2; m++) {
-          var mod = m % 1440;
-          if (mod >= 360 && mod < 1320) minSiang++; // 06:00 - 22:00
-          else minMalam++; // 22:00 - 06:00
+        var minitBertugas = m2 - m1;
+        
+        // Format Jumlah Jam Bertugas (Jam & Minit)
+        var jamBertugasStr = Math.floor(minitBertugas / 60) + 'j ' + (minitBertugas % 60) + 'm';
+
+        var minitSiangOT = 0;
+        var minitMalamOT = 0;
+        var tolakanStr = '';
+
+        if (jenisHari === 'biasa' && !isPH) {
+          // Hari Kerja Biasa (Bukan PH): Tolak 9 Jam (540 minit)
+          tolakanStr = '9j (Biasa)';
+          var minitBiasaDitolak = 0;
+
+          for (var m = m1; m < m2; m++) {
+            if (minitBiasaDitolak < 540) {
+              minitBiasaDitolak++;
+            } else {
+              var mod = m % 1440;
+              if (mod >= 360 && mod < 1320) minitSiangOT++; // Siang 06:00 - 22:00
+              else minitMalamOT++; // Malam 22:00 - 06:00
+            }
+          }
+        } else {
+          // Hujung Minggu ATAU Cuti Umum: Tolak masa rehat 13:00-14:00 & 19:00-20:00
+          var minitRehat = 0;
+
+          for (var m = m1; m < m2; m++) {
+            var mod = m % 1440;
+            var isRehat = (mod >= 780 && mod < 840) || (mod >= 1140 && mod < 1200);
+
+            if (isRehat) {
+              minitRehat++;
+            } else {
+              if (mod >= 360 && mod < 1320) minitSiangOT++;
+              else minitMalamOT++;
+            }
+          }
+          tolakanStr = minitRehat > 0 ? (minitRehat / 60) + 'j (Rehat)' : 'Tiada';
         }
 
+        var jamSiangOT = minitSiangOT / 60;
+        var jamMalamOT = minitMalamOT / 60;
+        var totalOTPerpuluhan = jamSiangOT + jamMalamOT;
+
         return {
-          siang: minSiang / 60,
-          malam: minMalam / 60,
-          total: (m2 - m1) / 60
+          minitBertugas: minitBertugas,
+          jamBertugasStr: jamBertugasStr,
+          tolakanStr: tolakanStr,
+          totalOTPerpuluhan: totalOTPerpuluhan,
+          jamSiangOT: jamSiangOT,
+          jamMalamOT: jamMalamOT
         };
       }
 
@@ -208,33 +253,35 @@
         e.preventDefault();
         var tarikh = document.getElementById('inputTarikh').value;
         var jenisHari = document.getElementById('inputJenisHari').value;
+        var isPH = document.getElementById('checkPH').checked;
         var dari = document.getElementById('inputMasaDari').value;
         var ke = document.getElementById('inputMasaKe').value;
-        var tugas = document.getElementById('inputTugas').value;
 
-        var jam = kiraPecahan(dari, ke);
+        var logik = kiraLogikMasa(dari, ke, jenisHari, isPH);
 
         var item = {
           id: Date.now(),
           tarikh: tarikh,
           jenisHari: jenisHari,
+          isPH: isPH,
           dari: dari,
           ke: ke,
-          tugas: tugas,
-          totalJam: jam.total,
+          jamBertugasStr: logik.jamBertugasStr,
+          tolakanStr: logik.tolakanStr,
+          totalOTPerpuluhan: logik.totalOTPerpuluhan,
           j1125: 0, j125: 0, j150: 0, j175: 0, j200: 0
         };
 
-        // Agihan kadar gandaan
-        if (jenisHari === 'biasa') {
-          item.j1125 = jam.siang;
-          item.j125 = jam.malam;
+        // Agihan kadar rate mengikut perpuluhan jam
+        if (isPH) {
+          item.j175 = logik.jamSiangOT;
+          item.j200 = logik.jamMalamOT;
         } else if (jenisHari === 'minggu') {
-          item.j125 = jam.siang;
-          item.j150 = jam.malam; // Kadar 1 1/2 bagi malam hujung minggu
-        } else if (jenisHari === 'ph') {
-          item.j175 = jam.siang;
-          item.j200 = jam.malam;
+          item.j125 = logik.jamSiangOT;
+          item.j150 = logik.jamMalamOT;
+        } else {
+          item.j1125 = logik.jamSiangOT;
+          item.j125 = logik.jamMalamOT;
         }
 
         senaraiTuntutan.push(item);
@@ -243,7 +290,7 @@
 
         document.getElementById('inputMasaDari').value = '';
         document.getElementById('inputMasaKe').value = '';
-        document.getElementById('inputTugas').value = '';
+        document.getElementById('checkPH').checked = false;
       }
 
       function padamItem(id) {
@@ -271,9 +318,9 @@
         return dd + '/' + mm + '/' + d.getFullYear();
       }
 
-      function kiraRM(gaji, kadar, jam) {
-        if (!gaji || gaji <= 0 || jam <= 0) return 0;
-        return (gaji * 12 * kadar * jam) / (313 * 8);
+      function kiraRM(gaji, kadar, jamPerpuluhan) {
+        if (!gaji || gaji <= 0 || jamPerpuluhan <= 0) return 0;
+        return (gaji * 12 * kadar * jamPerpuluhan) / (313 * 8);
       }
 
       function paparJadual() {
@@ -281,14 +328,14 @@
         var tbody = document.getElementById('jadualTuntutan');
         tbody.innerHTML = '';
 
-        var sumJam = 0, sum1125 = 0, sum125 = 0, sum150 = 0, sum175 = 0, sum200 = 0, grandRM = 0;
+        var sumTotalOTPerpuluhan = 0, sum1125 = 0, sum125 = 0, sum150 = 0, sum175 = 0, sum200 = 0, grandRM = 0;
 
         if (senaraiTuntutan.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-3">Tiada rekod. Masukkan rekod di atas.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="13" class="text-center text-muted py-3">Tiada rekod. Sila masukkan maklumat di atas.</td></tr>`;
         }
 
         senaraiTuntutan.forEach(item => {
-          sumJam += item.totalJam;
+          sumTotalOTPerpuluhan += item.totalOTPerpuluhan;
           sum1125 += item.j1125;
           sum125 += item.j125;
           sum150 += item.j150;
@@ -302,18 +349,24 @@
                        kiraRM(gaji, 2.0, item.j200);
           grandRM += rmItem;
 
+          var labelTarikh = formatTarikhMs(item.tarikh);
+          if (item.isPH) {
+            labelTarikh += ' <span class="badge bg-danger">PH</span>';
+          }
+
           var tr = document.createElement('tr');
           tr.innerHTML = `
-            <td class="text-center fw-semibold">${formatTarikhMs(item.tarikh)}</td>
+            <td class="text-center fw-semibold">${labelTarikh}</td>
             <td class="text-center">${item.dari}</td>
             <td class="text-center">${item.ke}</td>
-            <td class="text-center fw-bold">${item.totalJam.toFixed(1)}</td>
-            <td class="text-center rate-col">${item.j1125 > 0 ? item.j1125.toFixed(1) : '-'}</td>
-            <td class="text-center rate-col">${item.j125 > 0 ? item.j125.toFixed(1) : '-'}</td>
-            <td class="text-center rate-col">${item.j150 > 0 ? item.j150.toFixed(1) : '-'}</td>
-            <td class="text-center rate-col">${item.j175 > 0 ? item.j175.toFixed(1) : '-'}</td>
-            <td class="text-center rate-col">${item.j200 > 0 ? item.j200.toFixed(1) : '-'}</td>
-            <td>${item.tugas}</td>
+            <td class="text-center fw-bold">${item.jamBertugasStr}</td>
+            <td class="text-center text-muted small">${item.tolakanStr}</td>
+            <td class="text-center fw-bold text-primary">${item.totalOTPerpuluhan.toFixed(2)} j</td>
+            <td class="text-center rate-col">${item.j1125 > 0 ? item.j1125.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${item.j125 > 0 ? item.j125.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${item.j150 > 0 ? item.j150.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${item.j175 > 0 ? item.j175.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${item.j200 > 0 ? item.j200.toFixed(2) : '-'}</td>
             <td class="text-end fw-bold text-primary">RM ${rmItem.toFixed(2)}</td>
             <td class="text-center no-print">
               <button class="btn btn-sm text-danger p-0" onclick="padamItem(${item.id})"><i class="bi bi-x-circle-fill"></i></button>
@@ -322,12 +375,12 @@
           tbody.appendChild(tr);
         });
 
-        document.getElementById('footTotalJam').innerText = sumJam.toFixed(1);
-        document.getElementById('footR1125').innerText = sum1125 > 0 ? sum1125.toFixed(1) : '-';
-        document.getElementById('footR125').innerText = sum125 > 0 ? sum125.toFixed(1) : '-';
-        document.getElementById('footR150').innerText = sum150 > 0 ? sum150.toFixed(1) : '-';
-        document.getElementById('footR175').innerText = sum175 > 0 ? sum175.toFixed(1) : '-';
-        document.getElementById('footR200').innerText = sum200 > 0 ? sum200.toFixed(1) : '-';
+        document.getElementById('footTotalOTPerpuluhan').innerText = sumTotalOTPerpuluhan.toFixed(2) + ' j';
+        document.getElementById('footR1125').innerText = sum1125 > 0 ? sum1125.toFixed(2) : '-';
+        document.getElementById('footR125').innerText = sum125 > 0 ? sum125.toFixed(2) : '-';
+        document.getElementById('footR150').innerText = sum150 > 0 ? sum150.toFixed(2) : '-';
+        document.getElementById('footR175').innerText = sum175 > 0 ? sum175.toFixed(2) : '-';
+        document.getElementById('footR200').innerText = sum200 > 0 ? sum200.toFixed(2) : '-';
         document.getElementById('footGrandTotal').innerText = 'RM ' + grandRM.toFixed(2);
       }
     </script>
