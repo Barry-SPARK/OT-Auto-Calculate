@@ -63,24 +63,28 @@
                 </select>
               </div>
 
-              <!-- Checkbox Cuti Umum (PH) -->
-              <div class="col-md-2 col-12 d-flex align-items-end mb-1">
-                <div class="form-check form-switch pt-2">
-                  <input class="form-check-input" type="checkbox" id="checkPH">
-                  <label class="form-check-label fw-bold text-danger small" for="checkPH">Cuti Umum (PH)</label>
-                </div>
-              </div>
-
               <!-- Masa Dari -->
-              <div class="col-md-2 col-6">
+              <div class="col-md-3 col-6">
                 <label class="form-label small fw-bold">Masa Dari</label>
                 <input type="time" id="inputMasaDari" class="form-control form-control-sm" required>
               </div>
 
               <!-- Masa Ke -->
-              <div class="col-md-2 col-6">
+              <div class="col-md-3 col-6">
                 <label class="form-label small fw-bold">Masa Ke</label>
                 <input type="time" id="inputMasaKe" class="form-control form-control-sm" required>
+              </div>
+
+              <!-- Checkbox Cuti Umum (PH) & OT Sahaja -->
+              <div class="col-md-6 col-12 d-flex align-items-center gap-3 mt-2">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="checkPH">
+                  <label class="form-check-label fw-bold text-danger small" for="checkPH">Cuti Umum (PH)</label>
+                </div>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="checkOtSahaja">
+                  <label class="form-check-label fw-bold text-primary small" for="checkOtSahaja">OT Sahaja (Luar Waktu Kerja)</label>
+                </div>
               </div>
 
               <!-- Butang Tambah -->
@@ -188,7 +192,7 @@
       }
 
       // Pengiraan Logic Tolakan Masa & Siang/Malam
-      function kiraLogikMasa(dari, ke, jenisHari, isPH) {
+      function kiraLogikMasa(dari, ke, jenisHari, isPH, isOtSahaja) {
         var p1 = dari.split(':'), p2 = ke.split(':');
         var m1 = parseInt(p1[0]) * 60 + parseInt(p1[1]);
         var m2 = parseInt(p2[0]) * 60 + parseInt(p2[1]);
@@ -203,10 +207,16 @@
         var minitMalamOT = 0;
         var tolakanStr = '';
 
-        if (jenisHari === 'biasa' && !isPH) {
+        if (isOtSahaja) {
+          // Jika tugasan adalah OT sahaja (tiada tolakan waktu kerja biasa)
+          tolakanStr = 'Tiada (OT Sahaja)';
+          for (var m = m1; m < m2; m++) {
+            var mod = m % 1440;
+            if (mod >= 360 && mod < 1320) minitSiangOT++; // Siang 06:00 - 22:00
+            else minitMalamOT++; // Malam 22:00 - 06:00
+          }
+        } else if (jenisHari === 'biasa' && !isPH) {
           // SYARAT BAHARU HARI BIASA:
-          // Kerja Tamat (Masa Ke) <= 20:59 (m2 < 1260 minit) -> Tolak 9 Jam (540 minit)
-          // Kerja Tamat (Masa Ke) >= 21:00 (m2 >= 1260 minit) -> Tolak 10 Jam (600 minit)
           var minitBiasaDitolakTarget = (m2 < 1260) ? 540 : 600;
           tolakanStr = (minitBiasaDitolakTarget / 60) + 'j (Biasa)';
 
@@ -258,16 +268,18 @@
         var tarikh = document.getElementById('inputTarikh').value;
         var jenisHari = document.getElementById('inputJenisHari').value;
         var isPH = document.getElementById('checkPH').checked;
+        var isOtSahaja = document.getElementById('checkOtSahaja').checked;
         var dari = document.getElementById('inputMasaDari').value;
         var ke = document.getElementById('inputMasaKe').value;
 
-        var logik = kiraLogikMasa(dari, ke, jenisHari, isPH);
+        var logik = kiraLogikMasa(dari, ke, jenisHari, isPH, isOtSahaja);
 
         var item = {
           id: Date.now(),
           tarikh: tarikh,
           jenisHari: jenisHari,
           isPH: isPH,
+          isOtSahaja: isOtSahaja,
           dari: dari,
           ke: ke,
           jamBertugasStr: logik.jamBertugasStr,
@@ -295,6 +307,7 @@
         document.getElementById('inputMasaDari').value = '';
         document.getElementById('inputMasaKe').value = '';
         document.getElementById('checkPH').checked = false;
+        document.getElementById('checkOtSahaja').checked = false;
       }
 
       function padamItem(id) {
