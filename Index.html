@@ -20,7 +20,7 @@
     </style>
   </head>
   <body>
-    <div class="container-fluid" style="max-width: 1050px;">
+    <div class="container-fluid" style="max-width: 1100px;">
       
       <!-- Tajuk App -->
       <div class="text-center mb-3">
@@ -43,7 +43,10 @@
 
       <!-- 2. Borang Input Rekod -->
       <div class="card no-print">
-        <div class="card-header"><i class="bi bi-pencil-square me-1"></i> Masukkan Rekod Tugas Lebih Masa</div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span id="tajukBorang"><i class="bi bi-pencil-square me-1"></i> Masukkan Rekod Tugas Lebih Masa</span>
+          <span class="badge bg-warning text-dark d-none" id="badgeModEdit">Mod Mengemaskini</span>
+        </div>
         <div class="card-body">
           <form onsubmit="tambahTugasan(event)">
             <div class="row g-2">
@@ -87,9 +90,14 @@
                 </div>
               </div>
 
-              <!-- Butang Tambah -->
-              <div class="col-12 mt-3">
-                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold"><i class="bi bi-plus-lg"></i> Tambah Rekod Ke Senarai</button>
+              <!-- Butang Tambah & Batal Edit -->
+              <div class="col-12 mt-3 d-flex gap-2">
+                <button type="submit" id="btnSubmit" class="btn btn-primary btn-sm w-100 fw-bold">
+                  <i class="bi bi-plus-lg"></i> Tambah Rekod Ke Senarai
+                </button>
+                <button type="button" id="btnBatalEdit" class="btn btn-secondary btn-sm fw-bold d-none" onclick="batalEdit()">
+                  Batal
+                </button>
               </div>
 
             </div>
@@ -101,7 +109,12 @@
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span><i class="bi bi-table me-1"></i> Ringkasan Tuntutan</span>
-          <button class="btn btn-sm btn-outline-light no-print" onclick="padamSemua()"><i class="bi bi-trash"></i> Reset Semua</button>
+          <div class="no-print">
+            <button class="btn btn-sm btn-outline-light me-1" onclick="susunIkutTarikh()" title="Susun Rekod Mengikut Tarikh & Masa secara Kronologi">
+              <i class="bi bi-sort-down"></i> Susun Mengikut Tarikh
+            </button>
+            <button class="btn btn-sm btn-outline-light" onclick="padamSemua()"><i class="bi bi-trash"></i> Reset Semua</button>
+          </div>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
@@ -115,7 +128,7 @@
                   <th rowspan="2" style="width: 85px;">Jumlah Lebih Masa</th>
                   <th colspan="5">Kadar Gandaan Bayaran Lebih Masa (Jam)</th>
                   <th rowspan="2" style="width: 100px;">Jumlah (RM)</th>
-                  <th rowspan="2" class="no-print" style="width: 40px;"></th>
+                  <th rowspan="2" class="no-print" style="width: 110px;">Tindakan</th>
                 </tr>
                 <tr>
                   <th style="width: 60px;">Dari</th>
@@ -160,6 +173,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       var senaraiTuntutan = [];
+      var editId = null; // Menjejaki status item yang sedang diedit
 
       window.onload = function() {
         var savedGaji = localStorage.getItem('tskew_gaji');
@@ -208,18 +222,15 @@
         var tolakanStr = '';
 
         if (isOtSahaja) {
-          // Tugasan khas OT sahaja (Tiada tolakan waktu kerja biasa)
           tolakanStr = 'Tiada (OT Sahaja)';
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
-            if (mod >= 360 && mod < 1320) minitSiangOT++; // Siang 06:00 AM - 10:00 PM
-            else minitMalamOT++;                        // Malam 10:00 PM - 06:00 AM
+            if (mod >= 360 && mod < 1320) minitSiangOT++; 
+            else minitMalamOT++;                        
           }
         } else if (jenisHari === 'biasa' && !isPH) {
-          // HARI KERJA BIASA:
-          // Masa Ke < 21:00 -> Tolak 9 Jam (540 min), Masa Ke >= 21:00 -> Tolak 10 Jam (600 min)
           var minitBiasaDitolakTarget = (m2 < 1260) ? 540 : 600;
-          var M_MULA_KERJA_BIASA = 480; // Waktu rasmi pejabat (08:00 AM)
+          var M_MULA_KERJA_BIASA = 480; 
 
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
@@ -231,25 +242,20 @@
               minitBiasaDitolak++;
             } else {
               if (mod >= 360 && mod < 1320) {
-                minitSiangOT++; // OT Siang (06:00 AM - 10:00 PM)
+                minitSiangOT++; 
               } else {
-                minitMalamOT++; // OT Malam (10:00 PM - 06:00 AM)
+                minitMalamOT++; 
               }
             }
           }
           tolakanStr = minitBiasaDitolak > 0 ? (minitBiasaDitolak / 60).toFixed(1) + 'j (Biasa)' : 'Tiada';
         } else {
-          // HUJUNGMINGGU / CUTI UMUM:
-          // Kerjaberakhir >= 2:30 PM (870 min) baru tolak rehat tengah hari
           var layakTolakRehatTengahHari = (m2 >= 870);
 
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
 
-            // Rehat 1: 1:00 PM - 2:00 PM (780 - 840 minit)
             var isRehat1 = (mod >= 780 && mod < 840) && layakTolakRehatTengahHari;
-
-            // Rehat 2: 7:00 PM - 8:00 PM (1140 - 1200 minit)
             var isRehat2 = (mod >= 1140 && mod < 1200);
 
             var isRehat = isRehat1 || isRehat2;
@@ -290,7 +296,7 @@
         var logik = kiraLogikMasa(dari, ke, jenisHari, isPH, isOtSahaja);
 
         var item = {
-          id: Date.now(),
+          id: editId ? editId : Date.now(),
           tarikh: tarikh,
           jenisHari: jenisHari,
           isPH: isPH,
@@ -303,7 +309,6 @@
           j1125: 0, j125: 0, j150: 0, j175: 0, j200: 0
         };
 
-        // Agihan kadar rate mengikut perpuluhan jam
         if (isPH) {
           item.j175 = logik.jamSiangOT;
           item.j200 = logik.jamMalamOT;
@@ -315,7 +320,16 @@
           item.j125 = logik.jamMalamOT;
         }
 
-        senaraiTuntutan.push(item);
+        if (editId) {
+          // Kemaskini rekod sedia ada
+          var idx = senaraiTuntutan.findIndex(i => i.id === editId);
+          if (idx !== -1) senaraiTuntutan[idx] = item;
+          batalEdit();
+        } else {
+          // Tambah rekod baharu
+          senaraiTuntutan.push(item);
+        }
+
         simpanData();
         paparJadual();
 
@@ -325,7 +339,74 @@
         if (document.getElementById('checkOtSahaja')) document.getElementById('checkOtSahaja').checked = false;
       }
 
+      // Fungsi Edit Item
+      function editItem(id) {
+        var item = senaraiTuntutan.find(i => i.id === id);
+        if (!item) return;
+
+        editId = id;
+        document.getElementById('inputTarikh').value = item.tarikh;
+        document.getElementById('inputJenisHari').value = item.jenisHari;
+        document.getElementById('inputMasaDari').value = item.dari;
+        document.getElementById('inputMasaKe').value = item.ke;
+        document.getElementById('checkPH').checked = item.isPH;
+        if (document.getElementById('checkOtSahaja')) {
+          document.getElementById('checkOtSahaja').checked = item.isOtSahaja || false;
+        }
+
+        // Tukar UI borang ke Mod Edit
+        var btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.innerHTML = '<i class="bi bi-check-lg"></i> Kemaskini Rekod';
+        btnSubmit.className = 'btn btn-warning btn-sm w-100 fw-bold';
+        document.getElementById('btnBatalEdit').classList.remove('d-none');
+        document.getElementById('badgeModEdit').classList.remove('d-none');
+
+        // Fokus pada input tarikh
+        document.getElementById('inputTarikh').focus();
+      }
+
+      function batalEdit() {
+        editId = null;
+        var btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.innerHTML = '<i class="bi bi-plus-lg"></i> Tambah Rekod Ke Senarai';
+        btnSubmit.className = 'btn btn-primary btn-sm w-100 fw-bold';
+        document.getElementById('btnBatalEdit').classList.add('d-none');
+        document.getElementById('badgeModEdit').classList.add('d-none');
+
+        document.getElementById('inputMasaDari').value = '';
+        document.getElementById('inputMasaKe').value = '';
+        document.getElementById('checkPH').checked = false;
+        if (document.getElementById('checkOtSahaja')) document.getElementById('checkOtSahaja').checked = false;
+      }
+
+      // Fungsi Susun Tarikh & Masa secara Otomatis
+      function susunIkutTarikh() {
+        if (senaraiTuntutan.length === 0) return;
+        senaraiTuntutan.sort((a, b) => {
+          if (a.tarikh !== b.tarikh) {
+            return a.tarikh.localeCompare(b.tarikh);
+          }
+          return a.dari.localeCompare(b.dari);
+        });
+        simpanData();
+        paparJadual();
+      }
+
+      // Fungsi Ubah Susunan Baris Manual (Up / Down)
+      function gerakBaris(index, arah) {
+        var targetIndex = index + arah;
+        if (targetIndex < 0 || targetIndex >= senaraiTuntutan.length) return;
+
+        var temp = senaraiTuntutan[index];
+        senaraiTuntutan[index] = senaraiTuntutan[targetIndex];
+        senaraiTuntutan[targetIndex] = temp;
+
+        simpanData();
+        paparJadual();
+      }
+
       function padamItem(id) {
+        if (editId === id) batalEdit();
         senaraiTuntutan = senaraiTuntutan.filter(i => i.id !== id);
         simpanData();
         paparJadual();
@@ -333,6 +414,7 @@
 
       function padamSemua() {
         if (confirm('Padam semua rekod tuntutan?')) {
+          batalEdit();
           senaraiTuntutan = [];
           simpanData();
           paparJadual();
@@ -366,7 +448,7 @@
           tbody.innerHTML = `<tr><td colspan="13" class="text-center text-muted py-3">Tiada rekod. Sila masukkan maklumat di atas.</td></tr>`;
         }
 
-        senaraiTuntutan.forEach(item => {
+        senaraiTuntutan.forEach((item, index) => {
           sumTotalOTPerpuluhan += item.totalOTPerpuluhan;
           sum1125 += item.j1125;
           sum125 += item.j125;
@@ -386,6 +468,9 @@
             labelTarikh += ' <span class="badge bg-danger">PH</span>';
           }
 
+          var disUp = index === 0 ? 'disabled' : '';
+          var disDown = index === senaraiTuntutan.length - 1 ? 'disabled' : '';
+
           var tr = document.createElement('tr');
           tr.innerHTML = `
             <td class="text-center fw-semibold">${labelTarikh}</td>
@@ -401,7 +486,20 @@
             <td class="text-center rate-col">${item.j200 > 0 ? item.j200.toFixed(2) : '-'}</td>
             <td class="text-end fw-bold text-primary">RM ${rmItem.toFixed(2)}</td>
             <td class="text-center no-print">
-              <button class="btn btn-sm text-danger p-0" onclick="padamItem(${item.id})"><i class="bi bi-x-circle-fill"></i></button>
+              <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-sm btn-outline-secondary p-0 px-1" title="Gerak Ke Atas" onclick="gerakBaris(${index}, -1)" ${disUp}>
+                  <i class="bi bi-arrow-up"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary p-0 px-1" title="Gerak Ke Bawah" onclick="gerakBaris(${index}, 1)" ${disDown}>
+                  <i class="bi bi-arrow-down"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary p-0 px-1" title="Edit Rekod" onclick="editItem(${item.id})">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger p-0 px-1" title="Padam Rekod" onclick="padamItem(${item.id})">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
             </td>
           `;
           tbody.appendChild(tr);
