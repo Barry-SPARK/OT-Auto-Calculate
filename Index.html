@@ -76,7 +76,7 @@
               </div>
 
               <!-- Checkbox Cuti Umum (PH) & OT Sahaja -->
-              <div class="col-md-6 col-12 d-flex align-items-center gap-3 mt-2">
+              <div class="col-md-12 col-12 d-flex align-items-center gap-3 mt-2">
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="checkPH">
                   <label class="form-check-label fw-bold text-danger small" for="checkPH">Cuti Umum (PH)</label>
@@ -199,45 +199,60 @@
         if (m2 <= m1) m2 += 1440; // Rentas tengah malam
 
         var minitBertugas = m2 - m1;
-        
-        // Format Jumlah Jam Bertugas (Jam & Minit)
         var jamBertugasStr = Math.floor(minitBertugas / 60) + 'j ' + (minitBertugas % 60) + 'm';
 
         var minitSiangOT = 0;
         var minitMalamOT = 0;
+        var minitBiasaDitolak = 0;
+        var minitRehat = 0;
         var tolakanStr = '';
 
         if (isOtSahaja) {
-          // Jika tugasan adalah OT sahaja (tiada tolakan waktu kerja biasa)
+          // Tugasan khas OT sahaja (Tiada tolakan waktu kerja biasa)
           tolakanStr = 'Tiada (OT Sahaja)';
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
-            if (mod >= 360 && mod < 1320) minitSiangOT++; // Siang 06:00 - 22:00
-            else minitMalamOT++; // Malam 22:00 - 06:00
+            if (mod >= 360 && mod < 1320) minitSiangOT++; // Siang 06:00 AM - 10:00 PM
+            else minitMalamOT++;                        // Malam 10:00 PM - 06:00 AM
           }
         } else if (jenisHari === 'biasa' && !isPH) {
-          // SYARAT BAHARU HARI BIASA:
+          // HARI KERJA BIASA:
+          // Masa Ke < 21:00 -> Tolak 9 Jam (540 min), Masa Ke >= 21:00 -> Tolak 10 Jam (600 min)
           var minitBiasaDitolakTarget = (m2 < 1260) ? 540 : 600;
-          tolakanStr = (minitBiasaDitolakTarget / 60) + 'j (Biasa)';
-
-          var minitBiasaDitolak = 0;
-
-          for (var m = m1; m < m2; m++) {
-            if (minitBiasaDitolak < minitBiasaDitolakTarget) {
-              minitBiasaDitolak++;
-            } else {
-              var mod = m % 1440;
-              if (mod >= 360 && mod < 1320) minitSiangOT++; // Siang 06:00 - 22:00
-              else minitMalamOT++; // Malam 22:00 - 06:00
-            }
-          }
-        } else {
-          // Hujung Minggu ATAU Cuti Umum: Tolak masa rehat 13:00-14:00 & 19:00-20:00
-          var minitRehat = 0;
+          var M_MULA_KERJA_BIASA = 480; // Waktu rasmi pejabat (08:00 AM)
 
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
-            var isRehat = (mod >= 780 && mod < 840) || (mod >= 1140 && mod < 1200);
+
+            var bakiMasaBermula8am = Math.max(0, m2 - M_MULA_KERJA_BIASA);
+            var perluTolakSebelum8am = (bakiMasaBermula8am < minitBiasaDitolakTarget);
+
+            if (minitBiasaDitolak < minitBiasaDitolakTarget && (mod >= M_MULA_KERJA_BIASA || perluTolakSebelum8am)) {
+              minitBiasaDitolak++;
+            } else {
+              if (mod >= 360 && mod < 1320) {
+                minitSiangOT++; // OT Siang (06:00 AM - 10:00 PM)
+              } else {
+                minitMalamOT++; // OT Malam (10:00 PM - 06:00 AM)
+              }
+            }
+          }
+          tolakanStr = minitBiasaDitolak > 0 ? (minitBiasaDitolak / 60).toFixed(1) + 'j (Biasa)' : 'Tiada';
+        } else {
+          // HUJUNGMINGGU / CUTI UMUM:
+          // Kerjaberakhir >= 2:30 PM (870 min) baru tolak rehat tengah hari
+          var layakTolakRehatTengahHari = (m2 >= 870);
+
+          for (var m = m1; m < m2; m++) {
+            var mod = m % 1440;
+
+            // Rehat 1: 1:00 PM - 2:00 PM (780 - 840 minit)
+            var isRehat1 = (mod >= 780 && mod < 840) && layakTolakRehatTengahHari;
+
+            // Rehat 2: 7:00 PM - 8:00 PM (1140 - 1200 minit)
+            var isRehat2 = (mod >= 1140 && mod < 1200);
+
+            var isRehat = isRehat1 || isRehat2;
 
             if (isRehat) {
               minitRehat++;
@@ -246,7 +261,7 @@
               else minitMalamOT++;
             }
           }
-          tolakanStr = minitRehat > 0 ? (minitRehat / 60) + 'j (Rehat)' : 'Tiada';
+          tolakanStr = minitRehat > 0 ? (minitRehat / 60).toFixed(1) + 'j (Rehat)' : 'Tiada';
         }
 
         var jamSiangOT = minitSiangOT / 60;
@@ -268,7 +283,7 @@
         var tarikh = document.getElementById('inputTarikh').value;
         var jenisHari = document.getElementById('inputJenisHari').value;
         var isPH = document.getElementById('checkPH').checked;
-        var isOtSahaja = document.getElementById('checkOtSahaja').checked;
+        var isOtSahaja = document.getElementById('checkOtSahaja') ? document.getElementById('checkOtSahaja').checked : false;
         var dari = document.getElementById('inputMasaDari').value;
         var ke = document.getElementById('inputMasaKe').value;
 
@@ -307,7 +322,7 @@
         document.getElementById('inputMasaDari').value = '';
         document.getElementById('inputMasaKe').value = '';
         document.getElementById('checkPH').checked = false;
-        document.getElementById('checkOtSahaja').checked = false;
+        if (document.getElementById('checkOtSahaja')) document.getElementById('checkOtSahaja').checked = false;
       }
 
       function padamItem(id) {
