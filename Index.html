@@ -20,7 +20,7 @@
     </style>
   </head>
   <body>
-    <div class="container-fluid" style="max-width: 1100px;">
+    <div class="container-fluid" style="max-width: 1120px;">
       
       <!-- Tajuk App -->
       <div class="text-center mb-3">
@@ -78,8 +78,8 @@
                 <input type="time" id="inputMasaKe" class="form-control form-control-sm" required>
               </div>
 
-              <!-- Checkbox Cuti Umum (PH) & OT Sahaja -->
-              <div class="col-md-12 col-12 d-flex align-items-center gap-3 mt-2">
+              <!-- Checkbox Suis Pilihan -->
+              <div class="col-md-12 col-12 d-flex flex-wrap align-items-center gap-3 mt-2">
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="checkPH">
                   <label class="form-check-label fw-bold text-danger small" for="checkPH">Cuti Umum (PH)</label>
@@ -87,6 +87,12 @@
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="checkOtSahaja">
                   <label class="form-check-label fw-bold text-primary small" for="checkOtSahaja">OT Sahaja (Luar Waktu Kerja)</label>
+                </div>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="checkAbaikanHad">
+                  <label class="form-check-label fw-bold text-warning-emphasis small" for="checkAbaikanHad" title="Tanda jika tugasan ini dibenarkan melebihi had 4j (hari biasa) atau 8j (hujung minggu/PH)">
+                    <i class="bi bi-shield-exclamation"></i> Abaikan Had Max OT (Kerja Khas)
+                  </label>
                 </div>
               </div>
 
@@ -124,7 +130,7 @@
                   <th rowspan="2" style="width: 90px;">Tarikh</th>
                   <th colspan="2">Masa</th>
                   <th rowspan="2" style="width: 95px;">Jumlah Jam Bertugas</th>
-                  <th rowspan="2" style="width: 90px;">Tolakan / Biasa</th>
+                  <th rowspan="2" style="width: 95px;">Tolakan / Catatan</th>
                   <th rowspan="2" style="width: 85px;">Jumlah Lebih Masa</th>
                   <th colspan="5">Kadar Gandaan Bayaran Lebih Masa (Jam)</th>
                   <th rowspan="2" style="width: 100px;">Jumlah (RM)</th>
@@ -173,7 +179,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       var senaraiTuntutan = [];
-      var editId = null; // Menjejaki status item yang sedang diedit
+      var editId = null;
 
       window.onload = function() {
         var savedGaji = localStorage.getItem('tskew_gaji');
@@ -205,8 +211,8 @@
         paparJadual();
       }
 
-      // Pengiraan Logic Tolakan Masa & Siang/Malam
-      function kiraLogikMasa(dari, ke, jenisHari, isPH, isOtSahaja) {
+      // Pengiraan Logic Tolakan Masa, Rehat & Had Maksimum OT (4j / 8j)
+      function kiraLogikMasa(dari, ke, jenisHari, isPH, isOtSahaja, isAbaikanHad) {
         var p1 = dari.split(':'), p2 = ke.split(':');
         var m1 = parseInt(p1[0]) * 60 + parseInt(p1[1]);
         var m2 = parseInt(p2[0]) * 60 + parseInt(p2[1]);
@@ -221,53 +227,82 @@
         var minitRehat = 0;
         var tolakanStr = '';
 
+        // Tentukan Had Maksimum Minit OT
+        var maxMinitOT = 999999;
+        if (!isAbaikanHad) {
+          if (jenisHari === 'biasa' && !isPH) {
+            maxMinitOT = 240; // Max 4 jam untuk Hari Biasa
+          } else {
+            maxMinitOT = 480; // Max 8 jam untuk Hujung Minggu / PH
+          }
+        }
+
+        var adaCapLimit = false;
+
         if (isOtSahaja) {
-          tolakanStr = 'Tiada (OT Sahaja)';
+          tolakanStr = 'OT Sahaja';
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
-            if (mod >= 360 && mod < 1320) minitSiangOT++; 
-            else minitMalamOT++;                        
+            if ((minitSiangOT + minitMalamOT) < maxMinitOT) {
+              if (mod >= 360 && mod < 1320) minitSiangOT++;
+              else minitMalamOT++;
+            } else {
+              adaCapLimit = true;
+            }
           }
         } else if (jenisHari === 'biasa' && !isPH) {
+          // HARI KERJA BIASA:
           var minitBiasaDitolakTarget = (m2 < 1260) ? 540 : 600;
-          var M_MULA_KERJA_BIASA = 480; 
+          var M_MULA_KERJA_BIASA = 480; // 08:00 AM
 
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
-
             var bakiMasaBermula8am = Math.max(0, m2 - M_MULA_KERJA_BIASA);
             var perluTolakSebelum8am = (bakiMasaBermula8am < minitBiasaDitolakTarget);
 
             if (minitBiasaDitolak < minitBiasaDitolakTarget && (mod >= M_MULA_KERJA_BIASA || perluTolakSebelum8am)) {
               minitBiasaDitolak++;
             } else {
-              if (mod >= 360 && mod < 1320) {
-                minitSiangOT++; 
+              // Semak Had Maksimum OT (4 jam)
+              if ((minitSiangOT + minitMalamOT) < maxMinitOT) {
+                if (mod >= 360 && mod < 1320) minitSiangOT++;
+                else minitMalamOT++;
               } else {
-                minitMalamOT++; 
+                adaCapLimit = true;
               }
             }
           }
           tolakanStr = minitBiasaDitolak > 0 ? (minitBiasaDitolak / 60).toFixed(1) + 'j (Biasa)' : 'Tiada';
         } else {
-          var layakTolakRehatTengahHari = (m2 >= 870);
+          // HUJUNGMINGGU / CUTI UMUM:
+          var layakTolakRehatTengahHari = (m2 >= 870); // Kerjaberakhir >= 2:30 PM
 
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
 
-            var isRehat1 = (mod >= 780 && mod < 840) && layakTolakRehatTengahHari;
-            var isRehat2 = (mod >= 1140 && mod < 1200);
+            var isRehat1 = (mod >= 780 && mod < 840) && layakTolakRehatTengahHari; // 1:00 PM - 2:00 PM
+            var isRehat2 = (mod >= 1140 && mod < 1200);                         // 7:00 PM - 8:00 PM
 
-            var isRehat = isRehat1 || isRehat2;
-
-            if (isRehat) {
+            if (isRehat1 || isRehat2) {
               minitRehat++;
             } else {
-              if (mod >= 360 && mod < 1320) minitSiangOT++;
-              else minitMalamOT++;
+              // Semak Had Maksimum OT (8 jam)
+              if ((minitSiangOT + minitMalamOT) < maxMinitOT) {
+                if (mod >= 360 && mod < 1320) minitSiangOT++;
+                else minitMalamOT++;
+              } else {
+                adaCapLimit = true;
+              }
             }
           }
           tolakanStr = minitRehat > 0 ? (minitRehat / 60).toFixed(1) + 'j (Rehat)' : 'Tiada';
+        }
+
+        if (adaCapLimit) {
+          var capLabel = (jenisHari === 'biasa' && !isPH) ? 'Cap 4j' : 'Cap 8j';
+          tolakanStr += ' [' + capLabel + ']';
+        } else if (isAbaikanHad && maxMinitOT !== 999999) {
+          tolakanStr += ' [Khas]';
         }
 
         var jamSiangOT = minitSiangOT / 60;
@@ -289,11 +324,12 @@
         var tarikh = document.getElementById('inputTarikh').value;
         var jenisHari = document.getElementById('inputJenisHari').value;
         var isPH = document.getElementById('checkPH').checked;
-        var isOtSahaja = document.getElementById('checkOtSahaja') ? document.getElementById('checkOtSahaja').checked : false;
+        var isOtSahaja = document.getElementById('checkOtSahaja').checked;
+        var isAbaikanHad = document.getElementById('checkAbaikanHad').checked;
         var dari = document.getElementById('inputMasaDari').value;
         var ke = document.getElementById('inputMasaKe').value;
 
-        var logik = kiraLogikMasa(dari, ke, jenisHari, isPH, isOtSahaja);
+        var logik = kiraLogikMasa(dari, ke, jenisHari, isPH, isOtSahaja, isAbaikanHad);
 
         var item = {
           id: editId ? editId : Date.now(),
@@ -301,6 +337,7 @@
           jenisHari: jenisHari,
           isPH: isPH,
           isOtSahaja: isOtSahaja,
+          isAbaikanHad: isAbaikanHad,
           dari: dari,
           ke: ke,
           jamBertugasStr: logik.jamBertugasStr,
@@ -321,12 +358,10 @@
         }
 
         if (editId) {
-          // Kemaskini rekod sedia ada
           var idx = senaraiTuntutan.findIndex(i => i.id === editId);
           if (idx !== -1) senaraiTuntutan[idx] = item;
           batalEdit();
         } else {
-          // Tambah rekod baharu
           senaraiTuntutan.push(item);
         }
 
@@ -336,10 +371,10 @@
         document.getElementById('inputMasaDari').value = '';
         document.getElementById('inputMasaKe').value = '';
         document.getElementById('checkPH').checked = false;
-        if (document.getElementById('checkOtSahaja')) document.getElementById('checkOtSahaja').checked = false;
+        document.getElementById('checkOtSahaja').checked = false;
+        document.getElementById('checkAbaikanHad').checked = false;
       }
 
-      // Fungsi Edit Item
       function editItem(id) {
         var item = senaraiTuntutan.find(i => i.id === id);
         if (!item) return;
@@ -350,18 +385,15 @@
         document.getElementById('inputMasaDari').value = item.dari;
         document.getElementById('inputMasaKe').value = item.ke;
         document.getElementById('checkPH').checked = item.isPH;
-        if (document.getElementById('checkOtSahaja')) {
-          document.getElementById('checkOtSahaja').checked = item.isOtSahaja || false;
-        }
+        document.getElementById('checkOtSahaja').checked = item.isOtSahaja || false;
+        document.getElementById('checkAbaikanHad').checked = item.isAbaikanHad || false;
 
-        // Tukar UI borang ke Mod Edit
         var btnSubmit = document.getElementById('btnSubmit');
         btnSubmit.innerHTML = '<i class="bi bi-check-lg"></i> Kemaskini Rekod';
         btnSubmit.className = 'btn btn-warning btn-sm w-100 fw-bold';
         document.getElementById('btnBatalEdit').classList.remove('d-none');
         document.getElementById('badgeModEdit').classList.remove('d-none');
 
-        // Fokus pada input tarikh
         document.getElementById('inputTarikh').focus();
       }
 
@@ -376,10 +408,10 @@
         document.getElementById('inputMasaDari').value = '';
         document.getElementById('inputMasaKe').value = '';
         document.getElementById('checkPH').checked = false;
-        if (document.getElementById('checkOtSahaja')) document.getElementById('checkOtSahaja').checked = false;
+        document.getElementById('checkOtSahaja').checked = false;
+        document.getElementById('checkAbaikanHad').checked = false;
       }
 
-      // Fungsi Susun Tarikh & Masa secara Otomatis
       function susunIkutTarikh() {
         if (senaraiTuntutan.length === 0) return;
         senaraiTuntutan.sort((a, b) => {
@@ -392,7 +424,6 @@
         paparJadual();
       }
 
-      // Fungsi Ubah Susunan Baris Manual (Up / Down)
       function gerakBaris(index, arah) {
         var targetIndex = index + arah;
         if (targetIndex < 0 || targetIndex >= senaraiTuntutan.length) return;
