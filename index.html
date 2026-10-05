@@ -141,7 +141,7 @@
                   <th style="width: 60px;">Ke</th>
                   <th style="width: 55px;">1 1/8</th>
                   <th style="width: 55px;">1 1/4</th>
-                  <th style="width: 55px;">1 1/2</th>
+                  <th style="width: 55px;">1 1/3</th>
                   <th style="width: 55px;">1 3/4</th>
                   <th style="width: 55px;">2</th>
                 </tr>
@@ -157,7 +157,7 @@
                   <td class="text-center text-primary" id="footTotalOTPerpuluhan">0.00 j</td>
                   <td class="rate-col" id="footR1125">0.00</td>
                   <td class="rate-col" id="footR125">0.00</td>
-                  <td class="rate-col" id="footR150">0.00</td>
+                  <td class="rate-col" id="footR1333">0.00</td>
                   <td class="rate-col" id="footR175">0.00</td>
                   <td class="rate-col" id="footR200">0.00</td>
                   <td class="text-end text-primary" id="footGrandTotal">RM 0.00</td>
@@ -336,7 +336,7 @@
           jamBertugasStr: logik.jamBertugasStr,
           tolakanStr: logik.tolakanStr,
           totalOTPerpuluhan: logik.totalOTPerpuluhan,
-          j1125: 0, j125: 0, j150: 0, j175: 0, j200: 0
+          j1125: 0, j125: 0, j1333: 0, j175: 0, j200: 0
         };
 
         if (isPH) {
@@ -344,7 +344,7 @@
           item.j200 = logik.jamMalamOT;
         } else if (jenisHari === 'minggu') {
           item.j125 = logik.jamSiangOT;
-          item.j150 = logik.jamMalamOT;
+          item.j1333 = logik.jamMalamOT;
         } else {
           item.j1125 = logik.jamSiangOT;
           item.j125 = logik.jamMalamOT;
@@ -456,18 +456,12 @@
         return dd + '/' + mm + '/' + d.getFullYear();
       }
 
-      // Formula Rasmi OT TS.KEW:13
-      function kiraRM(gaji, kadar, jam) {
-        if (!gaji || gaji <= 0 || jam <= 0) return 0;
-        return (gaji * 12 * kadar * jam) / (313 * 8);
-      }
-
       function paparJadual() {
         var gaji = parseFloat(document.getElementById('gajiPokok').value) || 0;
         var tbody = document.getElementById('jadualTuntutan');
         tbody.innerHTML = '';
 
-        var sumTotalOTPerpuluhan = 0, sum1125 = 0, sum125 = 0, sum150 = 0, sum175 = 0, sum200 = 0;
+        var sumTotalOTPerpuluhan = 0, sum1125 = 0, sum125 = 0, sum1333 = 0, sum175 = 0, sum200 = 0;
 
         if (senaraiTuntutan.length === 0) {
           tbody.innerHTML = `<tr><td colspan="13" class="text-center text-muted py-3">Tiada rekod. Sila masukkan maklumat di atas.</td></tr>`;
@@ -477,7 +471,7 @@
           sumTotalOTPerpuluhan += item.totalOTPerpuluhan;
           sum1125 += item.j1125;
           sum125 += item.j125;
-          sum150 += item.j150;
+          sum1333 += item.j1333;
           sum175 += item.j175;
           sum200 += item.j200;
 
@@ -499,7 +493,7 @@
             <td class="text-center fw-bold text-primary">${item.totalOTPerpuluhan.toFixed(2)} j</td>
             <td class="text-center rate-col">${item.j1125 > 0 ? item.j1125.toFixed(2) : '-'}</td>
             <td class="text-center rate-col">${item.j125 > 0 ? item.j125.toFixed(2) : '-'}</td>
-            <td class="text-center rate-col">${item.j150 > 0 ? item.j150.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${item.j1333 > 0 ? item.j1333.toFixed(2) : '-'}</td>
             <td class="text-center rate-col">${item.j175 > 0 ? item.j175.toFixed(2) : '-'}</td>
             <td class="text-center rate-col">${item.j200 > 0 ? item.j200.toFixed(2) : '-'}</td>
             <td class="text-center text-muted">-</td>
@@ -523,17 +517,23 @@
           tbody.appendChild(tr);
         });
 
-        // Pengiraan Tepat RM Secara Keseluruhan (Sama Seperti Kalkulator Manual)
-        var grandRM = kiraRM(gaji, 1.125, sum1125) +
-                      kiraRM(gaji, 1.25, sum125) +
-                      kiraRM(gaji, 1.5, sum150) +
-                      kiraRM(gaji, 1.75, sum175) +
-                      kiraRM(gaji, 2.0, sum200);
+        // Formula pengiraan persis mengikut fungsi kiraOT() anda
+        var formula = function(kadar, jam) {
+          return (gaji * 12 * kadar * jam) / (313 * 8);
+        };
+
+        var r1125 = formula(1.125, sum1125);
+        var r125  = formula(1.25, sum125);
+        var r1333 = formula(1.33333333, sum1333);
+        var r175  = formula(1.75, sum175);
+        var r20   = formula(2.0, sum200);
+
+        var grandRM = r1125 + r125 + r1333 + r175 + r20;
 
         document.getElementById('footTotalOTPerpuluhan').innerText = sumTotalOTPerpuluhan.toFixed(2) + ' j';
         document.getElementById('footR1125').innerText = sum1125 > 0 ? sum1125.toFixed(2) : '-';
         document.getElementById('footR125').innerText = sum125 > 0 ? sum125.toFixed(2) : '-';
-        document.getElementById('footR150').innerText = sum150 > 0 ? sum150.toFixed(2) : '-';
+        document.getElementById('footR1333').innerText = sum1333 > 0 ? sum1333.toFixed(2) : '-';
         document.getElementById('footR175').innerText = sum175 > 0 ? sum175.toFixed(2) : '-';
         document.getElementById('footR200').innerText = sum200 > 0 ? sum200.toFixed(2) : '-';
         document.getElementById('footGrandTotal').innerText = 'RM ' + grandRM.toFixed(2);
