@@ -36,7 +36,7 @@
             <input type="number" step="0.01" id="gajiPokok" class="form-control form-control-lg fw-bold text-primary" placeholder="Masukkan Gaji Pokok" oninput="kemaskiniGaji()">
           </div>
           <div class="col-md-6 text-md-end text-muted small mt-2 mt-md-0">
-            <div>Formula OT: <code>(Gaji Pokok × 12 × Kadar × Jam Perpuluhan) ÷ (313 × 8)</code></div>
+            <div>Formula OT: <code>(Gaji Pokok × 12 × Kadar × Jumlah Jam) ÷ (313 × 8)</code></div>
           </div>
         </div>
       </div>
@@ -133,7 +133,7 @@
                   <th rowspan="2" style="width: 95px;">Tolakan / Catatan</th>
                   <th rowspan="2" style="width: 85px;">Jumlah Lebih Masa</th>
                   <th colspan="5">Kadar Gandaan Bayaran Lebih Masa (Jam)</th>
-                  <th rowspan="2" style="width: 100px;">Jumlah (RM)</th>
+                  <th rowspan="2" style="width: 90px;">Jumlah (RM)</th>
                   <th rowspan="2" class="no-print" style="width: 110px;">Tindakan</th>
                 </tr>
                 <tr>
@@ -206,17 +206,15 @@
       }
 
       function kemaskiniGaji() {
-        var val = document.getElementById('gajiPokok').value;
-        localStorage.setItem('tskew_gaji', val);
+        localStorage.setItem('tskew_gaji', document.getElementById('gajiPokok').value);
         paparJadual();
       }
 
-      // Pengiraan Logic Tolakan Masa, Rehat & Had Maksimum OT (4j / 8j)
       function kiraLogikMasa(dari, ke, jenisHari, isPH, isOtSahaja, isAbaikanHad) {
         var p1 = dari.split(':'), p2 = ke.split(':');
         var m1 = parseInt(p1[0]) * 60 + parseInt(p1[1]);
         var m2 = parseInt(p2[0]) * 60 + parseInt(p2[1]);
-        if (m2 <= m1) m2 += 1440; // Rentas tengah malam
+        if (m2 <= m1) m2 += 1440;
 
         var minitBertugas = m2 - m1;
         var jamBertugasStr = Math.floor(minitBertugas / 60) + 'j ' + (minitBertugas % 60) + 'm';
@@ -227,13 +225,12 @@
         var minitRehat = 0;
         var tolakanStr = '';
 
-        // Tentukan Had Maksimum Minit OT
         var maxMinitOT = 999999;
         if (!isAbaikanHad) {
           if (jenisHari === 'biasa' && !isPH) {
-            maxMinitOT = 240; // Max 4 jam untuk Hari Biasa
+            maxMinitOT = 240;
           } else {
-            maxMinitOT = 480; // Max 8 jam untuk Hujung Minggu / PH
+            maxMinitOT = 480;
           }
         }
 
@@ -251,9 +248,8 @@
             }
           }
         } else if (jenisHari === 'biasa' && !isPH) {
-          // HARI KERJA BIASA:
           var minitBiasaDitolakTarget = (m2 < 1260) ? 540 : 600;
-          var M_MULA_KERJA_BIASA = 480; // 08:00 AM
+          var M_MULA_KERJA_BIASA = 480;
 
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
@@ -263,7 +259,6 @@
             if (minitBiasaDitolak < minitBiasaDitolakTarget && (mod >= M_MULA_KERJA_BIASA || perluTolakSebelum8am)) {
               minitBiasaDitolak++;
             } else {
-              // Semak Had Maksimum OT (4 jam)
               if ((minitSiangOT + minitMalamOT) < maxMinitOT) {
                 if (mod >= 360 && mod < 1320) minitSiangOT++;
                 else minitMalamOT++;
@@ -274,19 +269,17 @@
           }
           tolakanStr = minitBiasaDitolak > 0 ? (minitBiasaDitolak / 60).toFixed(1) + 'j (Biasa)' : 'Tiada';
         } else {
-          // HUJUNGMINGGU / CUTI UMUM:
-          var layakTolakRehatTengahHari = (m2 >= 870); // Kerjaberakhir >= 2:30 PM
+          var layakTolakRehatTengahHari = (m2 >= 870);
 
           for (var m = m1; m < m2; m++) {
             var mod = m % 1440;
 
-            var isRehat1 = (mod >= 780 && mod < 840) && layakTolakRehatTengahHari; // 1:00 PM - 2:00 PM
-            var isRehat2 = (mod >= 1140 && mod < 1200);                         // 7:00 PM - 8:00 PM
+            var isRehat1 = (mod >= 780 && mod < 840) && layakTolakRehatTengahHari;
+            var isRehat2 = (mod >= 1140 && mod < 1200);
 
             if (isRehat1 || isRehat2) {
               minitRehat++;
             } else {
-              // Semak Had Maksimum OT (8 jam)
               if ((minitSiangOT + minitMalamOT) < maxMinitOT) {
                 if (mod >= 360 && mod < 1320) minitSiangOT++;
                 else minitMalamOT++;
@@ -463,9 +456,10 @@
         return dd + '/' + mm + '/' + d.getFullYear();
       }
 
-      function kiraRM(gaji, kadar, jamPerpuluhan) {
-        if (!gaji || gaji <= 0 || jamPerpuluhan <= 0) return 0;
-        return (gaji * 12 * kadar * jamPerpuluhan) / (313 * 8);
+      // Formula Rasmi OT TS.KEW:13
+      function kiraRM(gaji, kadar, jam) {
+        if (!gaji || gaji <= 0 || jam <= 0) return 0;
+        return (gaji * 12 * kadar * jam) / (313 * 8);
       }
 
       function paparJadual() {
@@ -473,7 +467,7 @@
         var tbody = document.getElementById('jadualTuntutan');
         tbody.innerHTML = '';
 
-        var sumTotalOTPerpuluhan = 0, sum1125 = 0, sum125 = 0, sum150 = 0, sum175 = 0, sum200 = 0, grandRM = 0;
+        var sumTotalOTPerpuluhan = 0, sum1125 = 0, sum125 = 0, sum150 = 0, sum175 = 0, sum200 = 0;
 
         if (senaraiTuntutan.length === 0) {
           tbody.innerHTML = `<tr><td colspan="13" class="text-center text-muted py-3">Tiada rekod. Sila masukkan maklumat di atas.</td></tr>`;
@@ -486,16 +480,6 @@
           sum150 += item.j150;
           sum175 += item.j175;
           sum200 += item.j200;
-
-          // Mengambil nilai RM per baris dan membulatkan ke 2 tempat desimal (sen)
-          var rmRaw = kiraRM(gaji, 1.125, item.j1125) +
-                      kiraRM(gaji, 1.25, item.j125) +
-                      kiraRM(gaji, 1.5, item.j150) +
-                      kiraRM(gaji, 1.75, item.j175) +
-                      kiraRM(gaji, 2.0, item.j200);
-          
-          var rmItem = Math.round(rmRaw * 100) / 100;
-          grandRM += rmItem;
 
           var labelTarikh = formatTarikhMs(item.tarikh);
           if (item.isPH) {
@@ -518,7 +502,7 @@
             <td class="text-center rate-col">${item.j150 > 0 ? item.j150.toFixed(2) : '-'}</td>
             <td class="text-center rate-col">${item.j175 > 0 ? item.j175.toFixed(2) : '-'}</td>
             <td class="text-center rate-col">${item.j200 > 0 ? item.j200.toFixed(2) : '-'}</td>
-            <td class="text-end fw-bold text-primary">RM ${rmItem.toFixed(2)}</td>
+            <td class="text-center text-muted">-</td>
             <td class="text-center no-print">
               <div class="btn-group btn-group-sm" role="group">
                 <button class="btn btn-sm btn-outline-secondary p-0 px-1" title="Gerak Ke Atas" onclick="gerakBaris(${index}, -1)" ${disUp}>
@@ -538,6 +522,13 @@
           `;
           tbody.appendChild(tr);
         });
+
+        // Pengiraan Tepat RM Secara Keseluruhan (Sama Seperti Kalkulator Manual)
+        var grandRM = kiraRM(gaji, 1.125, sum1125) +
+                      kiraRM(gaji, 1.25, sum125) +
+                      kiraRM(gaji, 1.5, sum150) +
+                      kiraRM(gaji, 1.75, sum175) +
+                      kiraRM(gaji, 2.0, sum200);
 
         document.getElementById('footTotalOTPerpuluhan').innerText = sumTotalOTPerpuluhan.toFixed(2) + ' j';
         document.getElementById('footR1125').innerText = sum1125 > 0 ? sum1125.toFixed(2) : '-';
