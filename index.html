@@ -186,7 +186,13 @@
         if (savedGaji) document.getElementById('gajiPokok').value = savedGaji;
 
         var savedData = localStorage.getItem('tskew_list');
-        if (savedData) senaraiTuntutan = JSON.parse(savedData);
+        if (savedData) {
+          try {
+            senaraiTuntutan = JSON.parse(savedData);
+          } catch(e) {
+            senaraiTuntutan = [];
+          }
+        }
 
         document.getElementById('inputTarikh').valueAsDate = new Date();
         autoKesanHari();
@@ -468,12 +474,20 @@
         }
 
         senaraiTuntutan.forEach((item, index) => {
-          sumTotalOTPerpuluhan += item.totalOTPerpuluhan;
-          sum1125 += item.j1125;
-          sum125 += item.j125;
-          sum1333 += item.j1333;
-          sum175 += item.j175;
-          sum200 += item.j200;
+          // Fallback sekiranya data lama tersimpan sebagai j150 atau undefined
+          var j1125 = item.j1125 || 0;
+          var j125 = item.j125 || 0;
+          var j1333 = item.j1333 || item.j150 || 0;
+          var j175 = item.j175 || 0;
+          var j200 = item.j200 || 0;
+          var totalOT = item.totalOTPerpuluhan || 0;
+
+          sumTotalOTPerpuluhan += totalOT;
+          sum1125 += j1125;
+          sum125 += j125;
+          sum1333 += j1333;
+          sum175 += j175;
+          sum200 += j200;
 
           var labelTarikh = formatTarikhMs(item.tarikh);
           if (item.isPH) {
@@ -490,12 +504,12 @@
             <td class="text-center">${item.ke}</td>
             <td class="text-center fw-bold">${item.jamBertugasStr}</td>
             <td class="text-center text-muted small">${item.tolakanStr}</td>
-            <td class="text-center fw-bold text-primary">${item.totalOTPerpuluhan.toFixed(2)} j</td>
-            <td class="text-center rate-col">${item.j1125 > 0 ? item.j1125.toFixed(2) : '-'}</td>
-            <td class="text-center rate-col">${item.j125 > 0 ? item.j125.toFixed(2) : '-'}</td>
-            <td class="text-center rate-col">${item.j1333 > 0 ? item.j1333.toFixed(2) : '-'}</td>
-            <td class="text-center rate-col">${item.j175 > 0 ? item.j175.toFixed(2) : '-'}</td>
-            <td class="text-center rate-col">${item.j200 > 0 ? item.j200.toFixed(2) : '-'}</td>
+            <td class="text-center fw-bold text-primary">${totalOT.toFixed(2)} j</td>
+            <td class="text-center rate-col">${j1125 > 0 ? j1125.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${j125 > 0 ? j125.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${j1333 > 0 ? j1333.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${j175 > 0 ? j175.toFixed(2) : '-'}</td>
+            <td class="text-center rate-col">${j200 > 0 ? j200.toFixed(2) : '-'}</td>
             <td class="text-center text-muted">-</td>
             <td class="text-center no-print">
               <div class="btn-group btn-group-sm" role="group">
@@ -517,8 +531,8 @@
           tbody.appendChild(tr);
         });
 
-        // Formula pengiraan persis mengikut fungsi kiraOT() anda
         var formula = function(kadar, jam) {
+          if (!gaji || gaji <= 0 || !jam || jam <= 0) return 0;
           return (gaji * 12 * kadar * jam) / (313 * 8);
         };
 
